@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Script Manager</title>
 <style>
   :root {
@@ -20,7 +20,11 @@
     --danger: #a03a3a;
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; }
+  html, body {
+    margin: 0;
+    height: 100%;
+    overscroll-behavior: none;
+  }
   body {
     background: var(--bg);
     color: var(--text);
@@ -32,6 +36,7 @@
     display: grid;
     grid-template-columns: 260px 1fr;
     height: 100vh;
+    height: 100dvh;
   }
   /* sidebar */
   .sidebar {
@@ -113,6 +118,7 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    min-width: 0;
   }
   .toolbar {
     padding: 12px 20px;
@@ -121,6 +127,10 @@
     gap: 10px;
     align-items: center;
     flex-wrap: wrap;
+    flex-shrink: 0;
+    background: var(--bg);
+    position: relative;
+    z-index: 2;
   }
   .toolbar input[type="text"] {
     background: var(--panel);
@@ -132,10 +142,11 @@
     border-radius: 6px;
     outline: none;
     transition: border-color .15s;
+    min-width: 0;
   }
   .toolbar input[type="text"]:focus { border-color: var(--border-hi); }
-  #name { flex: 1; min-width: 160px; font-weight: 600; }
-  #desc { flex: 2; min-width: 200px; font-size: 13px; }
+  #name { flex: 1; font-weight: 600; }
+  #desc { flex: 2; font-size: 13px; }
   .btn {
     background: var(--panel);
     border: 1px solid var(--border);
@@ -147,6 +158,7 @@
     cursor: pointer;
     transition: all .12s;
     white-space: nowrap;
+    flex-shrink: 0;
   }
   .btn:hover { border-color: var(--border-hi); background: var(--panel-hi); }
   .btn.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 600; }
@@ -154,11 +166,13 @@
   .btn.danger { color: #e18a8a; }
   .btn.danger:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
   .btn.ok { background: var(--success); color: #fff; border-color: var(--success); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
   /* editor */
   .editor-wrap {
     flex: 1;
     position: relative;
     overflow: hidden;
+    min-height: 0;
   }
   #editor {
     width: 100%;
@@ -173,6 +187,9 @@
     line-height: 1.65;
     padding: 20px 24px;
     tab-size: 2;
+    white-space: pre;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
   }
   /* loadstring bar */
   .ls-bar {
@@ -183,6 +200,7 @@
     align-items: center;
     background: var(--panel);
     flex-wrap: wrap;
+    flex-shrink: 0;
   }
   .ls-label {
     font-size: 11px;
@@ -299,8 +317,28 @@
       padding: 6px 12px;
       border-radius: 6px;
       cursor: pointer;
+      flex-shrink: 0;
     }
     #desc { display: none; }
+
+    .toolbar {
+      padding: 10px 12px;
+      gap: 8px;
+      flex-wrap: nowrap;
+    }
+    #name {
+      font-size: 13px;
+      padding: 8px 10px;
+    }
+    .toolbar .btn {
+      padding: 8px 10px;
+      font-size: 12px;
+    }
+    .ls-bar {
+      padding: 10px 12px;
+      gap: 8px;
+    }
+    .ls-value { font-size: 11px; }
   }
 </style>
 </head>
@@ -359,7 +397,6 @@
     password: localStorage.getItem('sm_pass') || '',
     scripts: [],
     currentId: null,
-    dirty: false,
   };
 
   let toastTimer;
@@ -432,25 +469,30 @@
 
   async function tryUnlock(pass) {
     state.password = pass;
-    const res = await fetch('/api/scripts', {
-      headers: { 'x-edit-password': pass },
-    });
-    if (res.status === 401) {
-      state.password = '';
-      $('gate-err').textContent = 'Wrong password.';
+    try {
+      const res = await fetch('/api/scripts', {
+        headers: { 'x-edit-password': pass },
+      });
+      if (res.status === 401) {
+        state.password = '';
+        $('gate-err').textContent = 'Wrong password.';
+        return false;
+      }
+      if (!res.ok) {
+        $('gate-err').textContent = 'Server error: ' + res.status;
+        return false;
+      }
+      const data = await res.json();
+      state.scripts = data.scripts || [];
+      localStorage.setItem('sm_pass', pass);
+      $('gate-err').textContent = '';
+      hideGate();
+      renderList();
+      return true;
+    } catch (e) {
+      $('gate-err').textContent = 'Network error: ' + e.message;
       return false;
     }
-    if (!res.ok) {
-      $('gate-err').textContent = 'Server error: ' + res.status;
-      return false;
-    }
-    const data = await res.json();
-    state.scripts = data.scripts || [];
-    localStorage.setItem('sm_pass', pass);
-    $('gate-err').textContent = '';
-    hideGate();
-    renderList();
-    return true;
   }
 
   $('gate-btn').addEventListener('click', () => tryUnlock($('gate-pass').value));
