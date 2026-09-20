@@ -1,8 +1,16 @@
 {
-  "name": "my-script-site",
-  "version": "1.0.0",
+  "name": "script-hosting",
   "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite"
+  },
   "dependencies": {
-    "@upstash/redis": "^1.34.3"
+    "@upstash/redis": "^1.34.3",
+    "wasmoon": "^1.16.0"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0"
   }
 }
