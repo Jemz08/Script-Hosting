@@ -1,16 +1,16 @@
 import { LuaFactory } from 'wasmoon';
 import glueWasmUrl from 'wasmoon/dist/glue.wasm?url';
 
-const REPO = 'prometheus-lua/Prometheus';
+// Try multiple repo candidates — first one that returns /src/*.lua files wins
+const REPO_CANDIDATES = [
+  'levno-710/Prometheus',
+  'prometheus-lua/Prometheus',
+];
 const REF = 'master';
-const JSDELIVR = `https://cdn.jsdelivr.net/gh/${REPO}@${REF}/`;
-const LIST_API = `https://data.jsdelivr.com/v1/packages/gh/${REPO}@${REF}?structure=flat`;
 
 let sourcesPromise = null;
 let enginePromise = null;
 
-// Lua long-bracket string. Prepends \n so Lua's "strip first newline" rule
-// leaves the content byte-identical.
 function luaStr(str) {
   let level = 0;
   while (str.includes(']' + '='.repeat(level) + ']')) level++;
@@ -18,25 +18,49 @@ function luaStr(str) {
   return `[${eq}[\n${str}]${eq}]`;
 }
 
+async function listFiles(repo) {
+  const listUrl = `https://data.jsdelivr.com/v1/packages/gh/${repo}@${REF}?structure=flat`;
+  const res = await fetch(listUrl);
+  if (!res.ok) throw new Error(`list HTTP ${res.status}`);
+  const data = await res.json();
+  const allFiles = data.files || [];
+  const srcLua = allFiles.filter(
+    f => f.type === 'file' && f.name.startsWith('/src/') && f.name.endsWith('.lua')
+  );
+  return { allFiles, srcLua };
+}
+
+async function pickRepo() {
+  const errors = [];
+  for (const repo of REPO_CANDIDATES) {
+    try {
+      const { allFiles, srcLua } = await listFiles(repo);
+      if (srcLua.length > 0) {
+        return { repo, files: srcLua, totalListed: allFiles.length };
+      }
+      // Give a useful diagnostic if this repo exists but has no /src/*.lua
+      const sample = allFiles.slice(0, 5).map(f => f.name).join(', ') || '(none)';
+      errors.push(`${repo}: ${allFiles.length} files, 0 .lua under /src/. Sample: ${sample}`);
+    } catch (e) {
+      errors.push(`${repo}: ${e.message}`);
+    }
+  }
+  throw new Error('No repo worked. ' + errors.join(' | '));
+}
+
 async function fetchSources() {
   if (sourcesPromise) return sourcesPromise;
   sourcesPromise = (async () => {
-    const res = await fetch(LIST_API);
-    if (!res.ok) throw new Error(`jsDelivr list ${res.status}`);
-    const data = await res.json();
-    const files = (data.files || [])
-      .filter(f => f.type === 'file' && f.name.startsWith('/src/') && f.name.endsWith('.lua'))
-      .map(f => f.name.replace(/^\//, ''));
-    if (!files.length) throw new Error('No Lua files found');
-
+    const picked = await pickRepo();
     const sources = {};
     const CONCURRENCY = 8;
     let idx = 0;
+    const cdnBase = `https://cdn.jsdelivr.net/gh/${picked.repo}@${REF}/`;
     async function pull() {
-      while (idx < files.length) {
-        const path = files[idx++];
-        const r = await fetch(JSDELIVR + path);
-        if (!r.ok) throw new Error(`fetch ${path}: ${r.status}`);
+      while (idx < picked.files.length) {
+        const path = picked.files[idx++].name.replace(/^\//, '');
+        const r = await fetch(cdnBase + path);
+        if (!r.ok) throw new Error(`fetch ${path}: HTTP ${r.status}`);
         const text = await r.text();
         const moduleName = path
           .replace(/^src\//, '')
@@ -47,8 +71,11 @@ async function fetchSources() {
       }
     }
     await Promise.all(Array.from({ length: CONCURRENCY }, pull));
-    return sources;
-  })();
+    return { repo: picked.repo, sources };
+  })().catch(err => {
+    sourcesPromise = null;
+    throw err;
+  });
   return sourcesPromise;
 }
 
@@ -102,11 +129,11 @@ return {
 async function getEngine() {
   if (enginePromise) return enginePromise;
   enginePromise = (async () => {
-    const sources = await fetchSources();
+    const { repo, sources } = await fetchSources();
     const factory = new LuaFactory(glueWasmUrl);
     const lua = await factory.createEngine({ openStandardLibs: true });
     await lua.doString(`_G.arg = _G.arg or {}\n${buildBootstrap(sources)}`);
-    return lua;
+    return { lua, repo, sourceCount: Object.keys(sources).length };
   })().catch(err => {
     enginePromise = null;
     throw err;
@@ -115,7 +142,7 @@ async function getEngine() {
 }
 
 async function obfuscate(opts) {
-  const lua = await getEngine();
+  const { lua } = await getEngine();
   const result = await lua.doString(buildRunLua(opts));
   if (!result || result.ok === false) {
     throw new Error(result?.error || 'Obfuscation failed');
@@ -129,7 +156,7 @@ self.onmessage = async (event) => {
     const { output, logs } = await obfuscate(opts);
     self.postMessage({ id, ok: true, output, logs });
   } catch (err) {
-    enginePromise = null; // force fresh engine on next attempt
+    enginePromise = null;
     self.postMessage({ id, ok: false, error: err?.message || String(err) });
   }
 };
