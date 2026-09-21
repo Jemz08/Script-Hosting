@@ -11,11 +11,19 @@ const REF = 'master';
 let sourcesPromise = null;
 let enginePromise = null;
 
+// Long-bracket string for arbitrary Lua source. Prepends \n so Lua's
+// "strip leading newline" rule leaves the content byte-identical.
 function luaStr(str) {
   let level = 0;
   while (str.includes(']' + '='.repeat(level) + ']')) level++;
   const eq = '='.repeat(level);
   return `[${eq}[\n${str}]${eq}]`;
+}
+
+// Quoted string for short safe identifiers (module names, chunk names).
+// JSON.stringify escapes the same way Lua needs for these characters.
+function luaQuote(str) {
+  return JSON.stringify(str);
 }
 
 async function listFiles(repo) {
@@ -24,8 +32,7 @@ async function listFiles(repo) {
   if (!res.ok) throw new Error(`list HTTP ${res.status}`);
   const data = await res.json();
   const allFiles = data.files || [];
-  // NOTE: jsDelivr's flat file list does not include a reliable `type` field.
-  // Filter by name only.
+  // jsDelivr's flat list does not reliably include a `type` field — filter by name.
   const srcLua = allFiles.filter(
     f => f.name && f.name.startsWith('/src/') && f.name.endsWith('.lua')
   );
@@ -81,11 +88,14 @@ async function fetchSources() {
 }
 
 function buildBootstrap(sources) {
+  // IMPORTANT: preload keys use quoted strings, not long brackets.
+  // `package.preload[[[\nname]]]` is mis-parsed by Lua's lexer because
+  // the first `[[` is read as a long-string opener, not a subscript.
   return Object.entries(sources)
     .map(([name, source]) => {
       const chunk = `@/src/${name.split('.').join('/')}.lua`;
-      return `package.preload[${luaStr(name)}] = function(...)
-  local c, e = load(${luaStr(source)}, ${luaStr(chunk)}, "t")
+      return `package.preload[${luaQuote(name)}] = function(...)
+  local c, e = load(${luaStr(source)}, ${luaQuote(chunk)}, "t")
   if not c then error(e) end
   return c(...)
 end`;
@@ -104,6 +114,9 @@ end
 if not math.log10 then
   math.log10 = function(v) return math.log(v, 10) end
 end
+if not os.getenv then
+  os.getenv = function() return nil end
+end
 local Prometheus = require("prometheus")
 Prometheus.Logger.logLevel = Prometheus.Logger.LogLevel.Info
 Prometheus.colors.enabled = false
@@ -113,11 +126,11 @@ Prometheus.Logger.warnCallback = function(...) pushLog("warn", ...) end
 Prometheus.Logger.errorCallback = function(...) pushLog("error", ...) end
 local ok, outOrErr = xpcall(function()
   local config = {}
-  for k, v in pairs(Prometheus.Presets[${luaStr(opts.preset)}]) do config[k] = v end
-  config.LuaVersion = ${luaStr(opts.luaVersion)}
+  for k, v in pairs(Prometheus.Presets[${luaQuote(opts.preset)}]) do config[k] = v end
+  config.LuaVersion = ${luaQuote(opts.luaVersion)}
   config.PrettyPrint = ${opts.prettyPrint ? 'true' : 'false'}
   config.Seed = ${Math.max(1, Math.floor(opts.seed))}
-  return Prometheus.Pipeline:fromConfig(config):apply(${luaStr(opts.source)}, ${luaStr(opts.filename)})
+  return Prometheus.Pipeline:fromConfig(config):apply(${luaStr(opts.source)}, ${luaQuote(opts.filename)})
 end, debug.traceback)
 return {
   ok = ok,
