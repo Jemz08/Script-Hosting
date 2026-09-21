@@ -24,8 +24,10 @@ async function listFiles(repo) {
   if (!res.ok) throw new Error(`list HTTP ${res.status}`);
   const data = await res.json();
   const allFiles = data.files || [];
+  // NOTE: jsDelivr's flat file list does not include a reliable `type` field.
+  // Filter by name only.
   const srcLua = allFiles.filter(
-    f => f.type === 'file' && f.name.startsWith('/src/') && f.name.endsWith('.lua')
+    f => f.name && f.name.startsWith('/src/') && f.name.endsWith('.lua')
   );
   return { allFiles, srcLua };
 }
@@ -38,7 +40,6 @@ async function pickRepo() {
       if (srcLua.length > 0) {
         return { repo, files: srcLua, totalListed: allFiles.length };
       }
-      // Give a useful diagnostic if this repo exists but has no /src/*.lua
       const sample = allFiles.slice(0, 5).map(f => f.name).join(', ') || '(none)';
       errors.push(`${repo}: ${allFiles.length} files, 0 .lua under /src/. Sample: ${sample}`);
     } catch (e) {
