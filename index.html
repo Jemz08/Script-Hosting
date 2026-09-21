@@ -27,20 +27,49 @@
     -webkit-font-smoothing: antialiased; overflow: hidden;
   }
   .app { display: grid; grid-template-columns: 260px 1fr; height: 100vh; height: 100dvh; }
-  .sidebar { background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
-  .sidebar-head { padding: 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+  /* sidebar */
+  .sidebar { background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; position: relative; z-index: 60; }
+  .sidebar-head { padding: 14px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 6px; }
   .brand { font-size: 14px; font-weight: 600; flex: 1; }
-  .new-btn { background: var(--accent); color: var(--bg); border: 0; font: inherit; font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 6px; cursor: pointer; }
+  .head-btn {
+    background: var(--panel-hi);
+    color: var(--text);
+    border: 1px solid var(--border);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all .12s;
+    white-space: nowrap;
+  }
+  .head-btn:hover { border-color: var(--border-hi); background: #1c2128; }
+  .head-btn.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+  .head-btn.primary:hover { opacity: 0.9; background: var(--accent); }
   .list { flex: 1; overflow-y: auto; padding: 8px; }
   .item { padding: 10px 12px; border-radius: 6px; cursor: pointer; margin-bottom: 2px; transition: background .12s; }
   .item:hover { background: var(--panel-hi); }
   .item.active { background: var(--panel-hi); box-shadow: inset 2px 0 0 var(--accent); }
   .item-name { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 6px; }
-  .item-name .lock { font-size: 10px; color: var(--accent); }
+  .item-name .lock { font-size: 10px; color: var(--accent); flex-shrink: 0; }
+  .item-name span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .item-meta { font-size: 11px; color: var(--dim); margin-top: 2px; }
-  .sidebar-foot { padding: 12px 16px; border-top: 1px solid var(--border); font-size: 11px; color: var(--dim); }
+  .sidebar-foot { padding: 12px 16px; border-top: 1px solid var(--border); font-size: 11px; color: var(--dim); display: flex; align-items: center; gap: 10px; }
   .sidebar-foot button { background: 0; border: 0; color: var(--dim); font: inherit; font-size: 11px; cursor: pointer; padding: 0; text-decoration: underline; }
   .sidebar-foot button:hover { color: var(--text); }
+  /* backdrop for mobile sidebar */
+  .backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    z-index: 55;
+    opacity: 0;
+    transition: opacity .2s;
+  }
+  .backdrop.show { display: block; opacity: 1; }
+  /* main */
   .main { display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
   .toolbar { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; gap: 8px; align-items: center; flex-shrink: 0; background: var(--bg); }
   .toolbar input[type="text"] { background: var(--panel); border: 1px solid var(--border); color: var(--text); font: inherit; font-size: 14px; padding: 8px 12px; border-radius: 6px; outline: none; min-width: 0; }
@@ -53,16 +82,39 @@
   .btn.danger:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
   .btn:disabled { opacity: 0.5; cursor: not-allowed; }
   .btn.toggle.active { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 600; }
+  /* editor */
   .editor-wrap { flex: 1; min-height: 0; position: relative; margin: 14px 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--panel); overflow: hidden; transition: border-color .15s; }
   .editor-wrap:focus-within { border-color: var(--border-hi); }
+  .editor-wrap.dragover { border-color: var(--accent); background: #131b24; }
+  .editor-wrap.dragover::after {
+    content: 'Drop .lua file';
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    background: rgba(11, 13, 16, 0.85);
+    color: var(--accent);
+    font-size: 14px;
+    font-weight: 600;
+    z-index: 5;
+    pointer-events: none;
+  }
   .editor-label { position: absolute; top: 0; left: 0; padding: 6px 12px; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); background: var(--panel); border-bottom-right-radius: 6px; z-index: 1; pointer-events: none; }
   #editor { position: absolute; inset: 0; width: 100%; height: 100%; background: transparent; border: 0; outline: none; resize: none; color: #cfd6de; font: inherit; font-size: 13px; line-height: 1.65; padding: 32px 16px 16px 16px; tab-size: 2; white-space: pre; overflow: auto; -webkit-overflow-scrolling: touch; }
+  /* obfuscator panel */
   .obf-panel { padding: 10px 16px; border-top: 1px solid var(--border); background: var(--bg); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; flex-shrink: 0; font-size: 12px; }
   .obf-panel label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .obf-panel label.switch { display: inline-flex; align-items: center; gap: 8px; text-transform: none; letter-spacing: 0; font-size: 12px; color: var(--text); cursor: pointer; user-select: none; }
+  .obf-panel label.switch input { appearance: none; -webkit-appearance: none; width: 34px; height: 20px; background: var(--border); border-radius: 10px; position: relative; cursor: pointer; transition: background .15s; margin: 0; }
+  .obf-panel label.switch input::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: #fff; border-radius: 50%; transition: transform .15s; }
+  .obf-panel label.switch input:checked { background: var(--accent); }
+  .obf-panel label.switch input:checked::after { transform: translateX(14px); }
   .obf-panel select { background: var(--panel); border: 1px solid var(--border); color: var(--text); font: inherit; font-size: 12px; padding: 5px 8px; border-radius: 4px; outline: none; }
+  /* loadstring bar */
   .ls-bar { border-top: 1px solid var(--border); padding: 12px 16px; display: flex; gap: 8px; align-items: center; background: var(--panel); flex-shrink: 0; }
   .ls-label { font-size: 10px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.06em; flex-shrink: 0; }
   .ls-value { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 9px 12px; font-size: 12px; color: var(--accent); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; user-select: all; min-width: 0; }
+  /* gate */
   .gate { position: fixed; inset: 0; background: var(--bg); display: grid; place-items: center; z-index: 100; padding: 24px; }
   .gate-inner { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 28px; width: 100%; max-width: 360px; }
   .gate h2 { margin: 0 0 6px; font-size: 17px; }
@@ -70,13 +122,17 @@
   .gate input { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); font: inherit; padding: 11px 14px; border-radius: 6px; outline: none; margin-bottom: 12px; }
   .gate button { width: 100%; background: var(--accent); border: 0; color: var(--bg); font: inherit; font-weight: 600; padding: 11px; border-radius: 6px; cursor: pointer; }
   .gate .err { color: #e18a8a; font-size: 12px; margin-top: 10px; min-height: 16px; }
-  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--success); color: #fff; font-size: 13px; padding: 10px 18px; border-radius: 8px; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; z-index: 200; }
+  /* toast */
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--success); color: #fff; font-size: 13px; padding: 10px 18px; border-radius: 8px; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; z-index: 200; max-width: 90vw; text-align: center; }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   .toast.err { background: var(--danger); }
+  /* hidden file input */
+  #file-input { display: none; }
+  /* mobile */
   .mobile-toggle { display: none; }
   @media (max-width: 720px) {
     .app { grid-template-columns: 1fr; }
-    .sidebar { position: fixed; inset: 0 auto 0 0; width: 280px; z-index: 50; transform: translateX(-100%); transition: transform .2s; }
+    .sidebar { position: fixed; inset: 0 auto 0 0; width: 280px; max-width: 82vw; z-index: 60; transform: translateX(-100%); transition: transform .2s; }
     .sidebar.open { transform: translateX(0); }
     .mobile-toggle { display: inline-flex; background: var(--panel); border: 1px solid var(--border); color: var(--text); font: inherit; font-size: 16px; padding: 6px 12px; border-radius: 6px; cursor: pointer; flex-shrink: 0; }
     .toolbar { padding: 10px 12px; gap: 6px; }
@@ -102,11 +158,14 @@
   </div>
 </div>
 
+<div class="backdrop" id="backdrop"></div>
+
 <div class="app" id="app" style="display:none">
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-head">
       <div class="brand">Scripts</div>
-      <button class="new-btn" id="new-btn">+ New</button>
+      <button class="head-btn" id="upload-btn" title="Upload .lua file">↑</button>
+      <button class="head-btn primary" id="new-btn">+ New</button>
     </div>
     <div class="list" id="list"></div>
     <div class="sidebar-foot">
@@ -123,25 +182,28 @@
       <button class="btn danger" id="delete-btn" style="display:none">Delete</button>
     </div>
 
-    <div class="editor-wrap">
+    <div class="editor-wrap" id="editor-wrap">
       <div class="editor-label" id="editor-label">Lua source</div>
-      <textarea id="editor" spellcheck="false" placeholder="-- paste your Lua here"></textarea>
+      <textarea id="editor" spellcheck="false" placeholder="-- paste your Lua here, or tap ↑ in the sidebar to upload a .lua file"></textarea>
     </div>
 
     <div class="obf-panel" id="obf-panel" style="display:none">
-      <label>Obfuscate</label>
-      <select id="obf-preset">
+      <label class="switch">
+        <input type="checkbox" id="obf-on" />
+        <span>Obfuscate</span>
+      </label>
+      <select id="obf-preset" title="Preset">
         <option value="Minify">Minify</option>
         <option value="Weak">Weak</option>
         <option value="Medium" selected>Medium</option>
         <option value="Strong">Strong</option>
       </select>
-      <select id="obf-version">
+      <select id="obf-version" title="Lua version">
         <option value="Lua51" selected>Lua51</option>
         <option value="LuaU">LuaU</option>
       </select>
       <label style="display:flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0">
-        <input type="checkbox" id="obf-pretty" /> Pretty print
+        <input type="checkbox" id="obf-pretty" /> Pretty
       </label>
       <span id="obf-status" style="color:var(--muted);margin-left:auto;font-size:11px"></span>
     </div>
@@ -150,10 +212,12 @@
       <span class="ls-label">Loadstring</span>
       <div class="ls-value" id="ls-value" title="Click to copy"></div>
       <button class="btn" id="ls-copy">Copy</button>
-      <button class="btn toggle" id="obf-toggle" title="Run Prometheus on save">Obfuscate</button>
+      <button class="btn toggle" id="obf-toggle" title="Quick toggle obfuscation">Obfuscate</button>
     </div>
   </main>
 </div>
+
+<input type="file" id="file-input" accept=".lua,.luau,.txt,text/plain" />
 
 <div class="toast" id="toast"></div>
 
@@ -285,6 +349,25 @@ $('gate-btn').addEventListener('click', () => tryUnlock($('gate-pass').value));
 $('gate-pass').addEventListener('keydown', e => { if (e.key === 'Enter') tryUnlock($('gate-pass').value); });
 $('lock-btn').addEventListener('click', () => lock());
 
+// ---- sidebar open/close ----
+function openSidebar() {
+  $('sidebar').classList.add('open');
+  $('backdrop').classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+function closeSidebar() {
+  $('sidebar').classList.remove('open');
+  $('backdrop').classList.remove('show');
+  document.body.style.overflow = '';
+}
+function toggleSidebar() {
+  if ($('sidebar').classList.contains('open')) closeSidebar();
+  else openSidebar();
+}
+$('mobile-toggle').addEventListener('click', toggleSidebar);
+$('backdrop').addEventListener('click', closeSidebar);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSidebar(); });
+
 // ---- list ----
 function renderList() {
   const list = $('list');
@@ -307,7 +390,7 @@ function renderList() {
     meta.className = 'item-meta';
     meta.textContent = fmtDate(s.updatedAt);
     el.appendChild(meta);
-    el.addEventListener('click', () => openScript(s.id));
+    el.addEventListener('click', () => { openScript(s.id); closeSidebar(); });
     list.appendChild(el);
   });
   $('count').textContent = state.scripts.length ? ` · ${state.scripts.length}` : '';
@@ -323,10 +406,11 @@ async function openScript(id) {
     $('editor').value = s.rawCode || s.code || '';
     $('delete-btn').style.display = '';
     $('ls-bar').style.display = 'flex';
+    $('obf-panel').style.display = 'flex';
     $('ls-value').textContent = loadstringFor(id);
     state.obfuscate = !!s.obfuscated;
+    $('obf-on').checked = state.obfuscate;
     $('obf-toggle').classList.toggle('active', state.obfuscate);
-    $('obf-panel').style.display = state.obfuscate ? 'flex' : 'none';
     if (s.obfuscator) {
       $('obf-preset').value = s.obfuscator.preset || 'Medium';
       $('obf-version').value = s.obfuscator.luaVersion || 'Lua51';
@@ -334,7 +418,6 @@ async function openScript(id) {
     }
     const lines = ($('editor').value || '').split('\n').length;
     $('editor-label').textContent = lines + ' line' + (lines === 1 ? '' : 's');
-    $('sidebar').classList.remove('open');
     renderList();
   } catch (e) {
     toast('Could not load script', true);
@@ -349,21 +432,80 @@ function newScript() {
   $('ls-bar').style.display = 'none';
   $('obf-panel').style.display = 'none';
   state.obfuscate = false;
+  $('obf-on').checked = false;
   $('obf-toggle').classList.remove('active');
   $('editor-label').textContent = 'Lua source';
-  $('sidebar').classList.remove('open');
+  closeSidebar();
   $('name').focus();
   renderList();
 }
 
-$('new-btn').addEventListener('click', newScript);
+$('new-btn').addEventListener('click', () => { newScript(); closeSidebar(); });
+
+// ---- file upload ----
+function loadFileIntoEditor(file) {
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) return toast('File too large (max 5 MB)', true);
+  const reader = new FileReader();
+  reader.onload = () => {
+    const text = String(reader.result || '');
+    $('editor').value = text;
+    const lines = text.split('\n').length;
+    $('editor-label').textContent = lines + ' line' + (lines === 1 ? '' : 's');
+    if (!state.currentId && !$('name').value.trim()) {
+      // auto-fill name from filename
+      const base = file.name.replace(/\.(lua|luau|txt)$/i, '');
+      $('name').value = base;
+    }
+    if (!state.currentId) {
+      $('delete-btn').style.display = 'none';
+      $('ls-bar').style.display = 'none';
+      $('obf-panel').style.display = 'flex';
+    }
+    toast('Loaded ' + file.name);
+    closeSidebar();
+  };
+  reader.onerror = () => toast('Failed to read file', true);
+  reader.readAsText(file);
+}
+
+$('upload-btn').addEventListener('click', () => $('file-input').click());
+$('file-input').addEventListener('change', (e) => {
+  const file = e.target.files && e.target.files[0];
+  loadFileIntoEditor(file);
+  e.target.value = '';
+});
+
+// drag & drop on editor
+const editorWrap = $('editor-wrap');
+['dragenter', 'dragover'].forEach(ev => {
+  editorWrap.addEventListener(ev, (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    editorWrap.classList.add('dragover');
+  });
+});
+['dragleave', 'drop'].forEach(ev => {
+  editorWrap.addEventListener(ev, (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (ev === 'dragleave' && editorWrap.contains(e.relatedTarget)) return;
+    editorWrap.classList.remove('dragover');
+  });
+});
+editorWrap.addEventListener('drop', (e) => {
+  const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  loadFileIntoEditor(file);
+});
 
 // ---- obfuscate toggle ----
-$('obf-toggle').addEventListener('click', () => {
-  state.obfuscate = !state.obfuscate;
-  $('obf-toggle').classList.toggle('active', state.obfuscate);
-  $('obf-panel').style.display = state.obfuscate ? 'flex' : 'none';
-});
+function setObfuscate(on) {
+  state.obfuscate = on;
+  $('obf-on').checked = on;
+  $('obf-toggle').classList.toggle('active', on);
+}
+$('obf-toggle').addEventListener('click', () => setObfuscate(!state.obfuscate));
+$('obf-on').addEventListener('change', () => setObfuscate($('obf-on').checked));
 
 // ---- save ----
 $('save-btn').addEventListener('click', async () => {
@@ -380,7 +522,7 @@ $('save-btn').addEventListener('click', async () => {
   if (state.obfuscate) {
     btn.disabled = true;
     btn.textContent = 'Obfuscating…';
-    $('obf-status').textContent = 'fetching…';
+    $('obf-status').textContent = 'working…';
     try {
       const preset = $('obf-preset').value;
       const luaVersion = $('obf-version').value;
@@ -420,6 +562,7 @@ $('save-btn').addEventListener('click', async () => {
     state.scripts.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
     $('delete-btn').style.display = '';
     $('ls-bar').style.display = 'flex';
+    $('obf-panel').style.display = 'flex';
     $('ls-value').textContent = loadstringFor(saved.id);
     renderList();
     toast(obfuscated ? 'Saved (obfuscated)' : 'Saved');
@@ -446,6 +589,7 @@ $('delete-btn').addEventListener('click', async () => {
   }
 });
 
+// ---- loadstring copy ----
 function copyLs() {
   if (!state.currentId) return;
   copyText(loadstringFor(state.currentId), 'Loadstring copied');
@@ -468,8 +612,7 @@ $('editor').addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); $('save-btn').click(); }
 });
 
-$('mobile-toggle').addEventListener('click', () => $('sidebar').classList.toggle('open'));
-
+// ---- boot ----
 (async function boot() {
   if (!state.password) return showGate();
   const ok = await tryUnlock(state.password);
