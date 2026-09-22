@@ -18,6 +18,14 @@
     --accent: #8fd3ff;
     --success: #1d7a4a;
     --danger: #a03a3a;
+    /* syntax colors */
+    --syn-keyword: #ff7bc7;
+    --syn-string: #a5e075;
+    --syn-comment: #5a6673;
+    --syn-number: #f2b16a;
+    --syn-function: #8fd3ff;
+    --syn-builtin: #c39fff;
+    --syn-operator: #8a94a1;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; overscroll-behavior: none; }
@@ -32,17 +40,9 @@
   .sidebar-head { padding: 14px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   .brand { font-size: 14px; font-weight: 600; flex: 1; }
   .head-btn {
-    background: var(--panel-hi);
-    color: var(--text);
-    border: 1px solid var(--border);
-    font: inherit;
-    font-size: 12px;
-    font-weight: 600;
-    padding: 6px 10px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all .12s;
-    white-space: nowrap;
+    background: var(--panel-hi); color: var(--text); border: 1px solid var(--border);
+    font: inherit; font-size: 12px; font-weight: 600; padding: 6px 10px;
+    border-radius: 6px; cursor: pointer; transition: all .12s; white-space: nowrap;
   }
   .head-btn:hover { border-color: var(--border-hi); background: #1c2128; }
   .head-btn.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); }
@@ -59,16 +59,7 @@
   .sidebar-foot { padding: 12px 16px; border-top: 1px solid var(--border); font-size: 11px; color: var(--dim); display: flex; align-items: center; gap: 10px; }
   .sidebar-foot button { background: 0; border: 0; color: var(--dim); font: inherit; font-size: 11px; cursor: pointer; padding: 0; text-decoration: underline; }
   .sidebar-foot button:hover { color: var(--text); }
-  /* backdrop for mobile sidebar */
-  .backdrop {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.55);
-    z-index: 55;
-    opacity: 0;
-    transition: opacity .2s;
-  }
+  .backdrop { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.55); z-index: 55; opacity: 0; transition: opacity .2s; }
   .backdrop.show { display: block; opacity: 1; }
   /* main */
   .main { display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
@@ -83,25 +74,75 @@
   .btn.danger:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
   .btn:disabled { opacity: 0.5; cursor: not-allowed; }
   .btn.toggle.active { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 600; }
+  .btn.icon { padding: 6px 10px; font-size: 13px; line-height: 1; }
+  /* search row */
+  .search-row {
+    display: flex; gap: 6px; align-items: center;
+    padding: 8px 16px; background: var(--bg);
+    border-bottom: 1px solid var(--border); flex-shrink: 0;
+  }
+  .search-icon { color: var(--dim); font-size: 14px; flex-shrink: 0; }
+  .search-input {
+    flex: 1; background: var(--panel); border: 1px solid var(--border);
+    color: var(--text); font: inherit; font-size: 12px;
+    padding: 6px 10px; border-radius: 5px; outline: none; min-width: 0;
+  }
+  .search-input:focus { border-color: var(--border-hi); }
+  .search-count {
+    font-size: 11px; color: var(--dim); min-width: 60px;
+    text-align: right; flex-shrink: 0;
+  }
+  .search-count.err { color: #e18a8a; }
   /* editor */
   .editor-wrap { flex: 1; min-height: 0; position: relative; margin: 14px 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--panel); overflow: hidden; transition: border-color .15s; }
   .editor-wrap:focus-within { border-color: var(--border-hi); }
   .editor-wrap.dragover { border-color: var(--accent); background: #131b24; }
   .editor-wrap.dragover::after {
     content: 'Drop .lua file';
-    position: absolute;
-    inset: 0;
-    display: grid;
-    place-items: center;
-    background: rgba(11, 13, 16, 0.85);
-    color: var(--accent);
-    font-size: 14px;
-    font-weight: 600;
-    z-index: 5;
-    pointer-events: none;
+    position: absolute; inset: 0; display: grid; place-items: center;
+    background: rgba(11, 13, 16, 0.85); color: var(--accent);
+    font-size: 14px; font-weight: 600; z-index: 5; pointer-events: none;
   }
-  .editor-label { position: absolute; top: 0; left: 0; padding: 6px 12px; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); background: var(--panel); border-bottom-right-radius: 6px; z-index: 1; pointer-events: none; }
-  #editor { position: absolute; inset: 0; width: 100%; height: 100%; background: transparent; border: 0; outline: none; resize: none; color: #cfd6de; font: inherit; font-size: 13px; line-height: 1.65; padding: 32px 16px 16px 16px; tab-size: 2; white-space: pre; overflow: auto; -webkit-overflow-scrolling: touch; }
+  .editor-label { position: absolute; top: 0; left: 0; padding: 6px 12px; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); background: var(--panel); border-bottom-right-radius: 6px; z-index: 3; pointer-events: none; }
+  /* highlight layer + textarea stack */
+  .code-container { position: absolute; inset: 0; overflow: hidden; }
+  .code-highlight,
+  #editor {
+    position: absolute; inset: 0;
+    margin: 0; border: 0; outline: none;
+    font: inherit; font-size: 13px; line-height: 1.65;
+    padding: 32px 16px 16px 16px;
+    tab-size: 2;
+    white-space: pre;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    word-wrap: normal;
+    overflow-wrap: normal;
+  }
+  .code-highlight {
+    color: #cfd6de;
+    background: transparent;
+    pointer-events: none;
+    z-index: 1;
+  }
+  #editor {
+    color: transparent;
+    background: transparent;
+    caret-color: #cfd6de;
+    z-index: 2;
+    resize: none;
+    -webkit-text-fill-color: transparent;
+  }
+  #editor::selection { background: rgba(143, 211, 255, 0.25); }
+  #editor::placeholder { color: var(--dim); -webkit-text-fill-color: var(--dim); }
+  /* syntax colors */
+  .code-highlight .tok-keyword { color: var(--syn-keyword); font-weight: 600; }
+  .code-highlight .tok-string { color: var(--syn-string); }
+  .code-highlight .tok-comment { color: var(--syn-comment); font-style: italic; }
+  .code-highlight .tok-number { color: var(--syn-number); }
+  .code-highlight .tok-function { color: var(--syn-function); }
+  .code-highlight .tok-builtin { color: var(--syn-builtin); }
+  .code-highlight .tok-operator { color: var(--syn-operator); }
   /* obfuscator panel */
   .obf-panel { padding: 10px 16px; border-top: 1px solid var(--border); background: var(--bg); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; flex-shrink: 0; font-size: 12px; }
   .obf-panel label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
@@ -116,69 +157,16 @@
   .ls-label { font-size: 10px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.06em; flex-shrink: 0; }
   .ls-value { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 9px 12px; font-size: 12px; color: var(--accent); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; user-select: all; min-width: 200px; }
   /* modal */
-  .modal-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.75);
-    z-index: 300;
-    padding: 20px;
-    align-items: center;
-    justify-content: center;
-  }
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75); z-index: 300; padding: 20px; align-items: center; justify-content: center; }
   .modal-overlay.show { display: flex; }
-  .modal {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    width: 100%;
-    max-width: 780px;
-    max-height: 85vh;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-  .modal-head {
-    padding: 14px 18px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
+  .modal { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; width: 100%; max-width: 780px; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; }
+  .modal-head { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
   .modal-title { font-size: 14px; font-weight: 600; flex: 1; }
   .modal-sub { font-size: 11px; color: var(--dim); }
-  .modal-close {
-    background: 0;
-    border: 0;
-    color: var(--muted);
-    font: inherit;
-    font-size: 22px;
-    line-height: 1;
-    cursor: pointer;
-    padding: 0 4px;
-  }
+  .modal-close { background: 0; border: 0; color: var(--muted); font: inherit; font-size: 22px; line-height: 1; cursor: pointer; padding: 0 4px; }
   .modal-close:hover { color: var(--text); }
-  .modal-body {
-    flex: 1;
-    overflow: auto;
-    margin: 0;
-    padding: 16px 18px;
-    font: inherit;
-    font-size: 12px;
-    line-height: 1.6;
-    color: #cfd6de;
-    background: var(--bg);
-    white-space: pre;
-    -webkit-overflow-scrolling: touch;
-    word-break: break-all;
-  }
-  .modal-foot {
-    padding: 12px 18px;
-    border-top: 1px solid var(--border);
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
+  .modal-body { flex: 1; overflow: auto; margin: 0; padding: 16px 18px; font: inherit; font-size: 12px; line-height: 1.6; color: #cfd6de; background: var(--bg); white-space: pre; -webkit-overflow-scrolling: touch; word-break: break-all; }
+  .modal-foot { padding: 12px 18px; border-top: 1px solid var(--border); display: flex; gap: 8px; flex-wrap: wrap; }
   /* gate */
   .gate { position: fixed; inset: 0; background: var(--bg); display: grid; place-items: center; z-index: 100; padding: 24px; }
   .gate-inner { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 28px; width: 100%; max-width: 360px; }
@@ -202,7 +190,10 @@
     .toolbar { padding: 10px 12px; gap: 6px; }
     #name { font-size: 13px; padding: 8px 10px; }
     .toolbar .btn { padding: 8px 10px; font-size: 12px; }
+    .search-row { padding: 6px 12px; gap: 4px; }
+    .search-count { min-width: 48px; font-size: 10px; }
     .editor-wrap { margin: 10px 12px; }
+    .code-highlight, #editor { font-size: 12px; padding: 30px 12px 12px 12px; }
     .obf-panel { padding: 8px 12px; gap: 8px; }
     .ls-bar { padding: 10px 12px; gap: 6px; }
     .ls-value { font-size: 11px; flex-basis: 100%; order: 3; }
@@ -248,9 +239,20 @@
       <button class="btn danger" id="delete-btn" style="display:none">Delete</button>
     </div>
 
+    <div class="search-row">
+      <span class="search-icon">⌕</span>
+      <input id="search-input" class="search-input" type="text" placeholder="Search in script…" autocomplete="off" spellcheck="false" />
+      <span class="search-count" id="search-count">—</span>
+      <button class="btn icon" id="search-prev" title="Previous">↑</button>
+      <button class="btn icon" id="search-next" title="Next">↓</button>
+    </div>
+
     <div class="editor-wrap" id="editor-wrap">
       <div class="editor-label" id="editor-label">Lua source</div>
-      <textarea id="editor" spellcheck="false" placeholder="-- paste your Lua here, or tap UPLOAD in the sidebar"></textarea>
+      <div class="code-container">
+        <pre class="code-highlight" id="code-highlight" aria-hidden="true"></pre>
+        <textarea id="editor" spellcheck="false" autocorrect="off" autocapitalize="off" placeholder="-- paste your Lua here, or tap UPLOAD in the sidebar"></textarea>
+      </div>
     </div>
 
     <div class="obf-panel" id="obf-panel" style="display:none">
@@ -265,8 +267,8 @@
         <option value="Strong">Strong</option>
       </select>
       <select id="obf-version" title="Lua version">
-        <option value="Lua51" selected>Lua51</option>
-        <option value="LuaU">LuaU</option>
+        <option value="Lua51">Lua51</option>
+        <option value="LuaU" selected>LuaU</option>
       </select>
       <label style="display:flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0">
         <input type="checkbox" id="obf-pretty" /> Pretty
@@ -314,6 +316,8 @@ const state = {
   currentId: null,
   obfuscate: false,
   servedCache: null,
+  searchMatches: [],
+  searchIndex: -1,
 };
 
 // ---- worker ----
@@ -440,20 +444,9 @@ $('gate-pass').addEventListener('keydown', e => { if (e.key === 'Enter') tryUnlo
 $('lock-btn').addEventListener('click', () => lock());
 
 // ---- sidebar open/close ----
-function openSidebar() {
-  $('sidebar').classList.add('open');
-  $('backdrop').classList.add('show');
-  document.body.style.overflow = 'hidden';
-}
-function closeSidebar() {
-  $('sidebar').classList.remove('open');
-  $('backdrop').classList.remove('show');
-  document.body.style.overflow = '';
-}
-function toggleSidebar() {
-  if ($('sidebar').classList.contains('open')) closeSidebar();
-  else openSidebar();
-}
+function openSidebar() { $('sidebar').classList.add('open'); $('backdrop').classList.add('show'); document.body.style.overflow = 'hidden'; }
+function closeSidebar() { $('sidebar').classList.remove('open'); $('backdrop').classList.remove('show'); document.body.style.overflow = ''; }
+function toggleSidebar() { if ($('sidebar').classList.contains('open')) closeSidebar(); else openSidebar(); }
 $('mobile-toggle').addEventListener('click', toggleSidebar);
 $('backdrop').addEventListener('click', closeSidebar);
 document.addEventListener('keydown', e => {
@@ -499,7 +492,7 @@ async function openScript(id) {
     state.currentId = id;
     state.servedCache = null;
     $('name').value = s.name || '';
-    $('editor').value = s.rawCode || s.code || '';
+    setEditorValue(s.rawCode || s.code || '');
     $('delete-btn').style.display = '';
     $('ls-bar').style.display = 'flex';
     $('obf-panel').style.display = 'flex';
@@ -509,11 +502,9 @@ async function openScript(id) {
     $('obf-toggle').classList.toggle('active', state.obfuscate);
     if (s.obfuscator) {
       $('obf-preset').value = s.obfuscator.preset || 'Medium';
-      $('obf-version').value = s.obfuscator.luaVersion || 'Lua51';
+      $('obf-version').value = s.obfuscator.luaVersion || 'LuaU';
       $('obf-pretty').checked = !!s.obfuscator.prettyPrint;
     }
-    const lines = ($('editor').value || '').split('\n').length;
-    $('editor-label').textContent = lines + ' line' + (lines === 1 ? '' : 's');
     renderList();
   } catch (e) {
     toast('Could not load script', true);
@@ -524,14 +515,14 @@ function newScript() {
   state.currentId = null;
   state.servedCache = null;
   $('name').value = '';
-  $('editor').value = '-- new script\n';
+  setEditorValue('-- new script\n');
   $('delete-btn').style.display = 'none';
   $('ls-bar').style.display = 'none';
   $('obf-panel').style.display = 'none';
   state.obfuscate = false;
   $('obf-on').checked = false;
   $('obf-toggle').classList.remove('active');
-  $('editor-label').textContent = 'Lua source';
+  clearSearch();
   closeSidebar();
   $('name').focus();
   renderList();
@@ -546,9 +537,7 @@ function loadFileIntoEditor(file) {
   const reader = new FileReader();
   reader.onload = () => {
     const text = String(reader.result || '');
-    $('editor').value = text;
-    const lines = text.split('\n').length;
-    $('editor-label').textContent = lines + ' line' + (lines === 1 ? '' : 's');
+    setEditorValue(text);
     if (!state.currentId && !$('name').value.trim()) {
       const base = file.name.replace(/\.(lua|luau|txt)$/i, '');
       $('name').value = base;
@@ -661,8 +650,6 @@ $('save-btn').addEventListener('click', async () => {
     $('ls-value').textContent = loadstringFor(saved.id);
     renderList();
     toast(obfuscated ? 'Saved (obfuscated)' : 'Saved');
-
-    // On first obfuscated save, auto-open the served preview so jv sees the result
     if (isFirstObfSave && obfuscated) {
       setTimeout(() => openServedModal(), 400);
     }
@@ -725,15 +712,9 @@ async function openServedModal() {
   }
 }
 
-function closeServedModal() {
-  $('served-modal').classList.remove('show');
-}
-
+function closeServedModal() { $('served-modal').classList.remove('show'); }
 $('served-close').addEventListener('click', closeServedModal);
-$('served-modal').addEventListener('click', e => {
-  if (e.target === $('served-modal')) closeServedModal();
-});
-
+$('served-modal').addEventListener('click', e => { if (e.target === $('served-modal')) closeServedModal(); });
 $('served-copy').addEventListener('click', async () => {
   try {
     const text = await fetchServed();
@@ -743,7 +724,6 @@ $('served-copy').addEventListener('click', async () => {
     setTimeout(() => { b.textContent = 'Copy all'; }, 1400);
   } catch (e) { toast('Copy failed', true); }
 });
-
 $('served-download').addEventListener('click', () => downloadServed());
 $('ls-view').addEventListener('click', openServedModal);
 $('ls-download').addEventListener('click', () => downloadServed());
@@ -758,35 +738,211 @@ async function downloadServed() {
     const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url;
-    a.download = base + suffix + '.lua';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    a.href = url; a.download = base + suffix + '.lua';
+    document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
     toast('Downloaded');
-  } catch (e) {
-    toast('Download failed', true);
-  }
+  } catch (e) { toast('Download failed', true); }
 }
 
-// ---- editor ----
+// ==================================================================
+// SYNTAX HIGHLIGHTING
+// ==================================================================
+
+const LUA_KEYWORDS = new Set([
+  'and','break','do','else','elseif','end','false','for','function','goto',
+  'if','in','local','nil','not','or','repeat','return','then','true','until','while',
+  'continue','export','type','typeof',
+]);
+const LUA_BUILTINS = new Set([
+  'print','warn','error','assert','pcall','xpcall','select','type','tostring','tonumber',
+  'pairs','ipairs','next','unpack','table','string','math','os','io','coroutine','debug',
+  'game','workspace','script','Instance','Vector3','Vector2','CFrame','Color3','UDim2',
+  'UDim','Ray','Region3','Enum','task','tick','wait','spawn','delay','require','setmetatable',
+  'getmetatable','rawget','rawset','rawequal','loadstring','load','collectgarbage',
+  'GetService','FindFirstChild','WaitForChild','GetChildren','GetDescendants','Destroy',
+  'Clone','Connect','Fire','Invoke','IsA','HttpGet',
+]);
+const LUA_TOKEN_RE = /(\-\-\[\[[\s\S]*?\]\])|(\-\-[^\n]*)|(\[\[[\s\S]*?\]\])|("(?:\\.|[^"\\])*")|('(?:\\.|[^'\\])*')|(\b\d+(?:\.\d+)?(?:[eE][+\-]?\d+)?\b)|(\b[A-Za-z_][A-Za-z0-9_]*\b)/g;
+
+function escapeHtml(s) {
+  return s.replace(/[&<>]/g, c => c === '&' ? '&amp;' : c === '<' ? '&lt;' : '&gt;');
+}
+
+function highlightLua(src) {
+  let out = '';
+  let last = 0;
+  let m;
+  LUA_TOKEN_RE.lastIndex = 0;
+  while ((m = LUA_TOKEN_RE.exec(src)) !== null) {
+    out += escapeHtml(src.slice(last, m.index));
+    const tok = m[0];
+    let cls;
+    if (m[1] || m[2]) cls = 'tok-comment';
+    else if (m[3] || m[4] || m[5]) cls = 'tok-string';
+    else if (m[6]) cls = 'tok-number';
+    else {
+      const word = tok;
+      if (LUA_KEYWORDS.has(word)) cls = 'tok-keyword';
+      else if (LUA_BUILTINS.has(word)) cls = 'tok-function';
+      else {
+        const after = src.slice(LUA_TOKEN_RE.lastIndex, LUA_TOKEN_RE.lastIndex + 8);
+        if (/^\s*\(/.test(after)) cls = 'tok-function';
+        else cls = null;
+      }
+    }
+    out += cls ? `<span class="${cls}">${escapeHtml(tok)}</span>` : escapeHtml(tok);
+    last = LUA_TOKEN_RE.lastIndex;
+  }
+  out += escapeHtml(src.slice(last));
+  return out;
+}
+
+let hlTimer = null;
+function refreshHighlight() {
+  if (hlTimer) return;
+  hlTimer = requestAnimationFrame(() => {
+    hlTimer = null;
+    const src = $('editor').value;
+    $('code-highlight').innerHTML = highlightLua(src) + '\n';
+  });
+}
+
+// keep highlight scrolled with textarea
+function syncScroll() {
+  const ed = $('editor');
+  const hl = $('code-highlight');
+  hl.scrollTop = ed.scrollTop;
+  hl.scrollLeft = ed.scrollLeft;
+}
+$('editor').addEventListener('scroll', syncScroll);
+
+// ==================================================================
+// SEARCH
+// ==================================================================
+
+function clearSearch() {
+  $('search-input').value = '';
+  $('search-count').textContent = '—';
+  $('search-count').classList.remove('err');
+  state.searchMatches = [];
+  state.searchIndex = -1;
+}
+
+function runSearch(keepIndex) {
+  const q = $('search-input').value;
+  const text = $('editor').value;
+  const count = $('search-count');
+  state.searchMatches = [];
+  if (!q) {
+    count.textContent = '—';
+    count.classList.remove('err');
+    state.searchIndex = -1;
+    return;
+  }
+  const lowerQ = q.toLowerCase();
+  const lowerText = text.toLowerCase();
+  let i = 0;
+  while (i <= lowerText.length) {
+    const found = lowerText.indexOf(lowerQ, i);
+    if (found === -1) break;
+    state.searchMatches.push(found);
+    i = found + Math.max(1, q.length);
+    if (state.searchMatches.length > 5000) break;
+  }
+  if (state.searchMatches.length === 0) {
+    count.textContent = 'no match';
+    count.classList.add('err');
+    state.searchIndex = -1;
+    return;
+  }
+  count.classList.remove('err');
+  if (!keepIndex || state.searchIndex < 0 || state.searchIndex >= state.searchMatches.length) {
+    state.searchIndex = 0;
+  }
+  count.textContent = `${state.searchIndex + 1} / ${state.searchMatches.length}`;
+  focusMatch();
+}
+
+function focusMatch() {
+  if (state.searchIndex < 0 || !state.searchMatches.length) return;
+  const ed = $('editor');
+  const pos = state.searchMatches[state.searchIndex];
+  const len = $('search-input').value.length;
+  ed.focus();
+  ed.setSelectionRange(pos, pos + len);
+  // scroll into view manually — textarea doesn't have scrollTo offset by char
+  const lineHeight = 13 * 1.65;
+  const before = ed.value.slice(0, pos);
+  const lineNum = (before.match(/\n/g) || []).length;
+  const targetTop = Math.max(0, lineNum * lineHeight - ed.clientHeight / 3);
+  ed.scrollTop = targetTop;
+  syncScroll();
+}
+
+function nextMatch() {
+  if (!state.searchMatches.length) return runSearch(false);
+  state.searchIndex = (state.searchIndex + 1) % state.searchMatches.length;
+  $('search-count').textContent = `${state.searchIndex + 1} / ${state.searchMatches.length}`;
+  focusMatch();
+}
+
+function prevMatch() {
+  if (!state.searchMatches.length) return runSearch(false);
+  state.searchIndex = (state.searchIndex - 1 + state.searchMatches.length) % state.searchMatches.length;
+  $('search-count').textContent = `${state.searchIndex + 1} / ${state.searchMatches.length}`;
+  focusMatch();
+}
+
+$('search-input').addEventListener('input', () => runSearch(false));
+$('search-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); e.shiftKey ? prevMatch() : nextMatch(); }
+  if (e.key === 'Escape') { clearSearch(); $('editor').focus(); }
+});
+$('search-next').addEventListener('click', nextMatch);
+$('search-prev').addEventListener('click', prevMatch);
+document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+    e.preventDefault();
+    $('search-input').focus();
+    $('search-input').select();
+  }
+});
+
+// ==================================================================
+// EDITOR
+// ==================================================================
+
+function setEditorValue(text) {
+  $('editor').value = text;
+  const lines = text.split('\n').length;
+  $('editor-label').textContent = lines + ' line' + (lines === 1 ? '' : 's');
+  refreshHighlight();
+  syncScroll();
+}
+
 $('editor').addEventListener('input', () => {
   const lines = $('editor').value.split('\n').length;
   $('editor-label').textContent = lines + ' line' + (lines === 1 ? '' : 's');
+  refreshHighlight();
+  // re-run search on change if query present
+  if ($('search-input').value) runSearch(true);
 });
+
 $('editor').addEventListener('keydown', e => {
   if (e.key === 'Tab') {
     e.preventDefault();
     const t = e.target, start = t.selectionStart, end = t.selectionEnd;
     t.value = t.value.substring(0, start) + '  ' + t.value.substring(end);
     t.selectionStart = t.selectionEnd = start + 2;
+    refreshHighlight();
   }
   if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); $('save-btn').click(); }
 });
 
 // ---- boot ----
 (async function boot() {
+  refreshHighlight();
   if (!state.password) return showGate();
   const ok = await tryUnlock(state.password);
   if (!ok) showGate();
