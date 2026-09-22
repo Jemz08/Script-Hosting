@@ -18,7 +18,6 @@
     --accent: #8fd3ff;
     --success: #1d7a4a;
     --danger: #a03a3a;
-    /* syntax colors */
     --syn-keyword: #ff7bc7;
     --syn-string: #a5e075;
     --syn-comment: #5a6673;
@@ -135,7 +134,6 @@
   }
   #editor::selection { background: rgba(143, 211, 255, 0.25); }
   #editor::placeholder { color: var(--dim); -webkit-text-fill-color: var(--dim); }
-  /* syntax colors */
   .code-highlight .tok-keyword { color: var(--syn-keyword); font-weight: 600; }
   .code-highlight .tok-string { color: var(--syn-string); }
   .code-highlight .tok-comment { color: var(--syn-comment); font-style: italic; }
@@ -808,7 +806,6 @@ function refreshHighlight() {
   });
 }
 
-// keep highlight scrolled with textarea
 function syncScroll() {
   const ed = $('editor');
   const hl = $('code-highlight');
@@ -829,7 +826,9 @@ function clearSearch() {
   state.searchIndex = -1;
 }
 
-function runSearch(keepIndex) {
+// Count matches. If `jump` is true, also move selection to the current match.
+// While typing in the search box we call with jump=false so focus stays put.
+function runSearch(jump) {
   const q = $('search-input').value;
   const text = $('editor').value;
   const count = $('search-count');
@@ -857,11 +856,11 @@ function runSearch(keepIndex) {
     return;
   }
   count.classList.remove('err');
-  if (!keepIndex || state.searchIndex < 0 || state.searchIndex >= state.searchMatches.length) {
+  if (state.searchIndex < 0 || state.searchIndex >= state.searchMatches.length) {
     state.searchIndex = 0;
   }
   count.textContent = `${state.searchIndex + 1} / ${state.searchMatches.length}`;
-  focusMatch();
+  if (jump) focusMatch();
 }
 
 function focusMatch() {
@@ -871,7 +870,6 @@ function focusMatch() {
   const len = $('search-input').value.length;
   ed.focus();
   ed.setSelectionRange(pos, pos + len);
-  // scroll into view manually — textarea doesn't have scrollTo offset by char
   const lineHeight = 13 * 1.65;
   const before = ed.value.slice(0, pos);
   const lineNum = (before.match(/\n/g) || []).length;
@@ -881,14 +879,14 @@ function focusMatch() {
 }
 
 function nextMatch() {
-  if (!state.searchMatches.length) return runSearch(false);
+  if (!state.searchMatches.length) return runSearch(true);
   state.searchIndex = (state.searchIndex + 1) % state.searchMatches.length;
   $('search-count').textContent = `${state.searchIndex + 1} / ${state.searchMatches.length}`;
   focusMatch();
 }
 
 function prevMatch() {
-  if (!state.searchMatches.length) return runSearch(false);
+  if (!state.searchMatches.length) return runSearch(true);
   state.searchIndex = (state.searchIndex - 1 + state.searchMatches.length) % state.searchMatches.length;
   $('search-count').textContent = `${state.searchIndex + 1} / ${state.searchMatches.length}`;
   focusMatch();
@@ -896,8 +894,14 @@ function prevMatch() {
 
 $('search-input').addEventListener('input', () => runSearch(false));
 $('search-input').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') { e.preventDefault(); e.shiftKey ? prevMatch() : nextMatch(); }
-  if (e.key === 'Escape') { clearSearch(); $('editor').focus(); }
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    e.shiftKey ? prevMatch() : nextMatch();
+  }
+  if (e.key === 'Escape') {
+    clearSearch();
+    $('search-input').blur();
+  }
 });
 $('search-next').addEventListener('click', nextMatch);
 $('search-prev').addEventListener('click', prevMatch);
@@ -925,8 +929,8 @@ $('editor').addEventListener('input', () => {
   const lines = $('editor').value.split('\n').length;
   $('editor-label').textContent = lines + ' line' + (lines === 1 ? '' : 's');
   refreshHighlight();
-  // re-run search on change if query present
-  if ($('search-input').value) runSearch(true);
+  // re-count only; never steal focus while typing in the editor
+  if ($('search-input').value) runSearch(false);
 });
 
 $('editor').addEventListener('keydown', e => {
