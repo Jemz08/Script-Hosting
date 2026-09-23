@@ -62,10 +62,10 @@
   .backdrop.show { display: block; opacity: 1; }
   /* main */
   .main { display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
-  .toolbar { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; gap: 8px; align-items: center; flex-shrink: 0; background: var(--bg); }
+  .toolbar { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; gap: 8px; align-items: center; flex-shrink: 0; background: var(--bg); flex-wrap: wrap; }
   .toolbar input[type="text"] { background: var(--panel); border: 1px solid var(--border); color: var(--text); font: inherit; font-size: 14px; padding: 8px 12px; border-radius: 6px; outline: none; min-width: 0; }
   .toolbar input[type="text"]:focus { border-color: var(--border-hi); }
-  #name { flex: 1; font-weight: 600; }
+  #name { flex: 1; font-weight: 600; min-width: 120px; }
   .btn { background: var(--panel); border: 1px solid var(--border); color: var(--text); font: inherit; font-size: 12px; padding: 8px 14px; border-radius: 6px; cursor: pointer; white-space: nowrap; flex-shrink: 0; transition: all .12s; }
   .btn:hover { border-color: var(--border-hi); background: var(--panel-hi); }
   .btn.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 600; }
@@ -186,7 +186,7 @@
     .sidebar.open { transform: translateX(0); }
     .mobile-toggle { display: inline-flex; background: var(--panel); border: 1px solid var(--border); color: var(--text); font: inherit; font-size: 16px; padding: 6px 12px; border-radius: 6px; cursor: pointer; flex-shrink: 0; }
     .toolbar { padding: 10px 12px; gap: 6px; }
-    #name { font-size: 13px; padding: 8px 10px; }
+    #name { font-size: 13px; padding: 8px 10px; flex-basis: 100%; order: -1; }
     .toolbar .btn { padding: 8px 10px; font-size: 12px; }
     .search-row { padding: 6px 12px; gap: 4px; }
     .search-count { min-width: 48px; font-size: 10px; }
@@ -233,6 +233,7 @@
     <div class="toolbar">
       <button class="mobile-toggle" id="mobile-toggle">☰</button>
       <input id="name" type="text" placeholder="Script name" />
+      <button class="btn" id="deob-btn" title="Deobfuscate editor content">Deobfuscate</button>
       <button class="btn primary" id="save-btn">Save</button>
       <button class="btn danger" id="delete-btn" style="display:none">Delete</button>
     </div>
@@ -306,6 +307,7 @@
 
 <script type="module">
 import ObfWorker from './src/worker/prometheus.worker.js?worker';
+import DeobWorker from './src/worker/deobfuscator.worker.js?worker';
 
 const $ = id => document.getElementById(id);
 const state = {
@@ -318,7 +320,7 @@ const state = {
   searchIndex: -1,
 };
 
-// ---- worker ----
+// ---- obfuscator worker ----
 let worker = null;
 let workerReqId = 0;
 let workerPending = new Map();
@@ -352,6 +354,38 @@ function runObfuscation({ source, preset, luaVersion, prettyPrint }) {
       preset, luaVersion, prettyPrint,
       seed: Math.floor(Math.random() * 2147483646) + 1,
     });
+  });
+}
+
+// ---- deobfuscator worker ----
+let deobWorker = null;
+let deobReqId = 0;
+let deobPending = new Map();
+
+function getDeobWorker() {
+  if (deobWorker) return deobWorker;
+  deobWorker = new DeobWorker();
+  deobWorker.addEventListener('message', (e) => {
+    const { id } = e.data;
+    const pending = deobPending.get(id);
+    if (!pending) return;
+    deobPending.delete(id);
+    if (e.data.ok) pending.resolve(e.data);
+    else pending.reject(new Error(e.data.error || 'Deobfuscation failed'));
+  });
+  deobWorker.addEventListener('error', (e) => {
+    for (const p of deobPending.values()) p.reject(new Error(e.message || 'Worker error'));
+    deobPending.clear();
+    deobWorker = null;
+  });
+  return deobWorker;
+}
+
+function runDeobfuscation(source) {
+  return new Promise((resolve, reject) => {
+    const id = ++deobReqId;
+    deobPending.set(id, { resolve, reject });
+    getDeobWorker().postMessage({ id, source });
   });
 }
 
@@ -586,6 +620,28 @@ function setObfuscate(on) {
 }
 $('obf-toggle').addEventListener('click', () => setObfuscate(!state.obfuscate));
 $('obf-on').addEventListener('change', () => setObfuscate($('obf-on').checked));
+
+// ---- deobfuscate ----
+$('deob-btn').addEventListener('click', async () => {
+  const source = $('editor').value;
+  if (!source.trim()) return toast('Editor is empty', true);
+
+  const btn = $('deob-btn');
+  const original = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Deobfuscating…';
+
+  try {
+    const result = await runDeobfuscation(source);
+    setEditorValue(result.output);
+    toast('Deobfuscated — review and save');
+  } catch (e) {
+    toast('Deobfuscation failed: ' + e.message, true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = original;
+  }
+});
 
 // ---- save ----
 $('save-btn').addEventListener('click', async () => {
